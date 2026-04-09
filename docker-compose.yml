@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE:      ${DB_NAME:-crop_yield_db}
+      MYSQL_USER:          ${DB_USER:-cropuser}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-changeme}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root",
+             "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-7860}:7860"
+    environment:
+      DB_HOST:         mysql
+      DB_PORT:         3306
+      DB_USER:         ${DB_USER:-cropuser}
+      DB_PASSWORD:     ${DB_PASSWORD:-changeme}
+      DB_NAME:         ${DB_NAME:-crop_yield_db}
+      ADMIN_USERNAME:  ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD:  ${ADMIN_PASSWORD:-admin123}
+      ADMIN_EMAIL:     ${ADMIN_EMAIL:-admin@cropyield.ke}
+      APP_PORT:        7860
+      LOG_LEVEL:       ${LOG_LEVEL:-INFO}
+      TF_CPP_MIN_LOG_LEVEL: 3
+      TF_ENABLE_ONEDNN_OPTS: 0
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./models/saved:/app/models/saved
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
